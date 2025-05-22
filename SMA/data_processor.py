@@ -2,6 +2,7 @@ from .data_fetcher import get_btc_data, get_fear_greed_index
 from .indicator import calculate_percentages
 import pandas as pd
 import json # Not strictly needed here if we return dict, but good for consistency
+import datetime
 
 def get_processed_data():
     '''Fetches and processes BTC and Fear & Greed data.'''
@@ -40,12 +41,24 @@ def generate_echarts_options(data_df):
         chart_df["Date"] = chart_df.index.astype(str)
 
     # Data preparation for ECharts
+    # 生成原始日期
     dates = chart_df["Date"].tolist()
-    close = chart_df["Close"].round(2).tolist() # Round for cleaner display
-    sma200 = chart_df["SMA_200"].round(2).tolist()
-    low_pct = chart_df["Low_Percentage"].round(2).tolist()
-    high_pct = chart_df["High_Percentage"].round(2).tolist()
-    fear_greed = chart_df["Fear_Greed"].tolist() # Typically integers, rounding not critical unless they become float
+    # 补充未来日期
+    last_date = datetime.datetime.strptime(dates[-1], "%Y-%m-%d")
+    future_days = 1460  # 例如补充一年
+    for i in range(1, future_days+1):
+        future = last_date + datetime.timedelta(days=i)
+        dates.append(future.strftime("%Y-%m-%d"))
+    # 处理NaN值
+    def replace_nan(val):
+        return val if pd.notna(val) else None
+    
+    # 修改数据准备部分
+    close = [replace_nan(x) for x in chart_df["Close"].round(2).tolist()]
+    sma200 = [replace_nan(x) for x in chart_df["SMA_200"].round(2).tolist()]
+    low_pct = [replace_nan(x) for x in chart_df["Low_Percentage"].round(2).tolist()]
+    high_pct = [replace_nan(x) for x in chart_df["High_Percentage"].round(2).tolist()]
+    fear_greed = [replace_nan(x) for x in chart_df["Fear_Greed"].tolist()]
 
     # Important events (Halving dates)
     halving_dates = ["2020-05-11", "2024-04-20", "2028-03-30"] # Keep as strings
@@ -79,8 +92,8 @@ def generate_echarts_options(data_df):
                 "itemStyle": {"color": "#FF0000", "opacity": 0.7},
                 "markLine": {
                     "symbol": "none",
-                    "data": [{"yAxis": -50, "label": {"formatter": "-50%"}}], # Added label to markLine
-                    "lineStyle": {"type": "dashed", "color": "#FF0000", "width": 2} # Width consistency
+                    "data": [{"yAxis": -50, "label": {"formatter": "-50%"}}],
+                    "lineStyle": {"type": "dashed", "color": "#FF0000", "width": 2}
                 }
             },
             {"name": "相对SMA上涨", "type": "bar", "data": high_pct, "yAxisIndex": 1, "itemStyle": {"color": "#00CC00", "opacity": 0.7}},
