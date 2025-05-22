@@ -19,8 +19,8 @@
    uv pip install -r requirements.txt
 
 6. **运行项目** ：
-7. 
+    
    uv run server.py
 
-8. **访问项目** ：
+7. **访问项目** ：
     在浏览器中访问 http://localhost:5000 ，查看应用运行情况。
