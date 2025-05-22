@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC Analysis Dashboard</title>
+    <!-- ECharts library -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            background-color: #f0f2f5; /* Lighter grey background */
+            color: #333;
+            padding: 10px; /* Add some padding around the body */
+        }
+        .container {
+            width: 100%; /* Full width on small screens */
+            max-width: 1400px; /* Max width for larger screens */
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px; /* Rounded corners */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Softer shadow */
+        }
+
+        /* Info Bar Styles */
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px; /* Slightly more padding */
+            background-color: #e9ecef; /* Lighter info bar */
+            border-radius: 6px;
+            margin-bottom: 20px;
+            flex-wrap: wrap; /* Allow wrapping for smaller screens */
+        }
+        #last-updated {
+            font-size: 0.95em;
+            color: #495057; /* Darker text for better readability */
+        }
+        #update-data-btn {
+            padding: 10px 18px;
+            font-size: 0.9em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        #update-data-btn:hover {
+            background-color: #0056b3;
+        }
+        #update-data-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        /* Chart Container Styles */
+        #chart-container {
+            width: 100%;
+            height: 75vh; /* Viewport height based, can be adjusted */
+            min-height: 450px; /* Minimum height */
+            border: 1px solid #dee2e6; /* Light border around chart */
+            border-radius: 4px;
+        }
+        
+        /* Page Title / Header (Optional but good practice) */
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #343a40;
+            font-weight: 500;
+        }
+
+        /* Footer (Optional) */
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 10px auto;
+            }
+            .info-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            #update-data-btn {
+                margin-top: 12px; /* Space when button is below text */
+                width: 100%; /* Full width button on mobile */
+            }
+            #chart-container {
+                height: 65vh; /* Adjust chart height for mobile */
+                min-height: 350px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+        @media (max-width: 480px) {
+            body { padding: 5px; }
+            .container { padding: 10px; }
+            #last-updated { font-size: 0.85em; }
+            #update-data-btn { font-size: 0.85em; padding: 9px 15px; }
+            h1 { font-size: 1.3em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BTC Multi-Factor Analysis</h1> <!-- Added a title -->
+        <div class="info-bar">
+            <span id="last-updated">Last updated: Loading...</span>
+            <button id="update-data-btn">Update Data Now</button>
+        </div>
+        <div id="chart-container"></div>
+    </div>
+    <footer>
+        <p>&copy; 2024 BTC Analysis Dashboard</p>
+    </footer>
+
+    <script type="text/javascript">
+        // JavaScript remains the same as in the previous step
+        const chartDom = document.getElementById('chart-container');
+        let myChart = echarts.init(chartDom); 
+
+        function fetchAndUpdateChart() {
+            myChart.showLoading(); 
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    myChart.hideLoading(); 
+                    if (data.error) {
+                        console.error("Error fetching data:", data.error);
+                        document.getElementById('chart-container').innerText = 'Error loading chart data. ' + data.error;
+                        if (data.last_updated) {
+                             document.getElementById('last-updated').textContent = 'Last updated: ' + new Date(data.last_updated).toLocaleString();
+                        } else {
+                             document.getElementById('last-updated').textContent = 'Last updated: Never (Error occurred)';
+                        }
+                        return;
+                    }
+                    if (data.echarts_options && Object.keys(data.echarts_options).length > 0) {
+                        if(document.getElementById('chart-container')){ // Ensure element exists
+                             myChart.setOption(data.echarts_options);
+                        }
+                    } else {
+                         document.getElementById('chart-container').innerText = 'No chart data available at the moment. Please try updating.';
+                    }
+                    if (data.last_updated) {
+                        document.getElementById('last-updated').textContent = 'Last updated: ' + new Date(data.last_updated).toLocaleString();
+                    } else {
+                        document.getElementById('last-updated').textContent = 'Last updated: Not available';
+                    }
+                })
+                .catch(error => {
+                    myChart.hideLoading();
+                    console.error('Error fetching chart data:', error);
+                    document.getElementById('chart-container').innerText = 'Failed to load chart data. Check console for details.';
+                    document.getElementById('last-updated').textContent = 'Last updated: Error';
+                });
+        }
+
+        document.getElementById('update-data-btn').addEventListener('click', function() {
+            this.textContent = 'Updating...';
+            this.disabled = true;
+            fetch('/update_data', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    // Using a more noticeable way to inform user, e.g. temporarily changing button text or a small status message
+                    const btn = document.getElementById('update-data-btn');
+                    const originalText = btn.textContent; // This will be 'Updating...'
+                    
+                    // It's better to set a specific message from server or a generic success one.
+                    btn.textContent = data.message || "Update request processed."; 
+                    
+                    // Fetch new data after a short delay to allow server to process
+                    setTimeout(() => {
+                        fetchAndUpdateChart();
+                        // Reset button text to original "Update Data Now" after fetch attempt and timeout
+                        // This was previously 'originalText' which was 'Updating...'
+                        btn.textContent = 'Update Data Now'; 
+                    }, 2000); 
+                })
+                .catch(error => {
+                    console.error('Error triggering data update:', error);
+                    alert('Failed to trigger data update.');
+                    document.getElementById('update-data-btn').textContent = 'Update Data Now'; // Reset on error
+                })
+                .finally(() => {
+                    // Re-enable button after timeout.
+                    // The button text is reset after the fetchAndUpdateChart call inside setTimeout now.
+                    setTimeout(() => {
+                         document.getElementById('update-data-btn').disabled = false;
+                         // Ensure text is reset if it was a success/processing message
+                         if(!(document.getElementById('update-data-btn').textContent === 'Update Data Now')){
+                            document.getElementById('update-data-btn').textContent = 'Update Data Now';
+                         }
+                    }, 2500); // This timeout should be long enough to cover the 2000ms + fetch
+                });
+        });
+
+        fetchAndUpdateChart();
+
+        window.addEventListener('resize', function() {
+            if (myChart) {
+                myChart.resize();
+            }
+        });
+    </script>
+</body>
+</html>
